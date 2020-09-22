@@ -1,6 +1,8 @@
 class Backlight:
     def __init__(self):
-        pass
+        self.hue = 0
+        self.sat = 255
+        self.val = 255
 
     def on(self, r=0xFF, g=0xFF, b=0xFF):
         pass
@@ -21,4 +23,16 @@ class Backlight:
         pass
 
     def update(self):
+        pass
+
+    def check(self):
+        return False
+
+    def next(self):
+        pass
+
+    def handle_key(self, key, pressed):
+        pass
+
+    def toggle(self):
         pass

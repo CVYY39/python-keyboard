@@ -57,6 +57,64 @@ def battery_level():
     return BATTERY_VOLTAGE[i]
 
 
+leds_x = bytearray((
+    0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 216,
+    220,200, 184, 168, 152, 136, 120, 104, 88, 72, 56, 40, 24, 4,
+    6, 27, 43, 59, 75, 91, 107, 123, 139, 155, 171, 187, 214,
+    210, 180, 164, 148, 132, 116, 100, 84, 68, 52, 36, 10,
+    2, 22, 42, 102, 162, 182, 202, 222, 123, 82
+))
+
+leds_y = bytearray((
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16,
+    32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32,
+    48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48,
+    64, 64, 64, 64, 64, 64, 64, 64, 64, 64
+))
+
+
+def hsv_to_rgb(h, s, v):
+    i = (h * 6) >> 8
+    f = (h * 6) & 0xFF
+
+    p = (v * (256 - s)) >> 8
+    q = (v * (65536 - s * f)) >> 16
+    t = (v * (65536 - s * (256 - f))) >> 16
+
+    if i == 0: return (v, t, p)
+    if i == 1: return (q, v, p)
+    if i == 2: return (p, v, t)
+    if i == 3: return (p, q, v)
+    if i == 4: return (t, p, v)
+    return (v, p, q)
+
+ 
+def wheel(h):
+    i = (h * 3) >> 8
+    a = (h * 3) & 0xFF
+    b = 255 - a
+
+    if i == 0: return (b, a, 0)
+    if i == 1: return (0, b, a)
+
+    return (a, 0, b)
+
+
+def wheel2(h, v):
+    i = (h * 3) >> 8
+    a = (h * 3) & 0xFF
+    b = 255 - a
+
+    a = a * v // 255
+    b = b * v // 255
+
+    if i == 0: return (b, a, 0)
+    if i == 1: return (0, b, a)
+
+    return (a, 0, b)
+
+
 class Backlight:
     def __init__(self):
         self.dev = IS31FL3733()
@@ -64,18 +122,123 @@ class Backlight:
         self._bt_led = None
         self.pixel = self.dev.pixel
 
+        self.enabled = True
+        self.hsv = [0, 255, 255]
+        self.keys = {}
+        self.n = 0
+
+        self.modes = (self.off, self.mono, self.gradient, self.spectrum, self.spectrum_x, self.spectrum_y, self.elapse)
+        self.mode = 6
+        self.mode_function = self.modes[self.mode]
+        self.dynamic = True
+
+    @property
+    def hue(self):
+        return self.hsv[0]
+
+    @hue.setter
+    def hue(self, h):
+        self.hsv[0] = h & 0xFF
+        if not self.dynamic:
+            self.mode_function()
+
+    @property
+    def sat(self):
+        return self.hsv[1]
+
+    @sat.setter
+    def sat(self, s):
+        self.hsv[1] = 0 if s < 0 else (255 if s > 255 else s)
+        if not self.dynamic:
+            self.mode_function()
+
+    @property
+    def val(self):
+        return self.dev.brightness
+
+    @val.setter
+    def val(self, v):
+        self.set_brightness(v)
+
+    def set_brightness(self, v):
+        if v <= 0:
+            self.enabled = False
+            self.off()
+        else:
+            self.enabled = True
+            self.dev.brightness = v if v < 0xFF else 0xFF
+            if not self.dynamic:
+                self.mode_function()
+
     def on(self, r=0xFF, g=0xFF, b=0xFF):
-        for i in range(64):
+        for i in range(63):
             self.pixel(i, r, g, b)
         self.update()
 
     def off(self):
-        for i in range(64):
-            self.pixel(i, 0, 0, 0)
+        self.dev.clear()
         self.update()
 
-    def set_brightness(self, v):
-        self.dev.set_brightness(v)
+    def toggle(self):
+        self.enabled = not self.enabled
+        if self.enabled:
+            self.set_mode(self.mode)
+        else:
+            self.off()
+
+    def mono(self):
+        self.on(*hsv_to_rgb(*self.hsv))
+
+    def gradient(self):
+        h0, s0, v0 = self.hsv
+        for i in range(63):
+            h = (leds_y[i] + h0) & 0xFF
+            self.pixel(i, *hsv_to_rgb(h, s0, v0))
+        self.update()
+
+    def spectrum(self, offset=0):
+        self.n = (self.n + 1) & 0xFF
+        r, g, b = wheel(self.n)
+        for i in range(63):
+            self.pixel(i, r, g, b)
+        self.update()
+        return True
+
+    def spectrum_x(self):
+        n = self.n
+        for i in range(63):
+            h = (leds_x[i] + n) & 0xFF
+            self.pixel(i, *wheel(h))
+        self.update()
+        self.n = (n + 1) & 0xFF
+        return True
+        
+    def spectrum_y(self):
+        n = self.n
+        for i in range(63):
+            h = (leds_y[i] + n) & 0xFF
+            self.pixel(i, *wheel(h))
+        self.update()
+        self.n = (n + 1) & 0xFF
+        return True
+        
+    def handle_key(self, key, pressed):
+        if self.enabled and self.mode == 6:
+            self.keys[key] = 255
+        
+    def elapse(self):
+        if 0 == len(self.keys):
+            return False
+        for i in self.keys.keys():
+            t = self.keys[i]
+            self.pixel(i, *wheel2(255 - t, t))
+            t -= 1
+            if t < 0:
+                self.keys.pop(i)
+            else:
+                self.keys[i] = t
+        self.update()
+        return True
 
     def set_hid_leds(self, v):
         self._hid_leds = v
@@ -84,8 +247,7 @@ class Backlight:
             self.dev.update_pixel(28, 0, 0x80, 0)
         else:
             self.dev.update_pixel(28, 0, 0, 0)
-            if self._bt_led is None and not self.dev.any():
-                self.dev.power.value = 0
+            self.mode_function()
 
     def set_bt_led(self, v):
         if self._bt_led is not None:
@@ -95,7 +257,7 @@ class Backlight:
         self._bt_led = v
         if v is not None:
             self.dev.breathing_pixel(v, 2)
-        elif (self._hid_leds & 2) == 0:
+        elif (self._hid_leds & 2) == 0 and not self.dev.any():
             self.dev.power.value = 0
 
     def update(self):
@@ -110,3 +272,33 @@ class Backlight:
         self.dev.update()
         if not in_use and not self.dev.any():
             self.dev.power.value = 0
+
+    def check(self):
+        if self.enabled and self.dynamic:
+            return self.mode_function()
+        return False
+
+    def next(self):
+        self.dev.clear()
+        self.mode += 1
+        if self.mode >= len(self.modes):
+            self.mode = 0
+        self.mode_function = self.modes[self.mode]
+        if self.mode == 6:
+            self.keys.clear()
+        if self.mode >= 3:
+            self.dynamic = True 
+        else:
+            self.dynamic = False
+            self.mode_function()
+
+    def set_mode(self, mode):
+        self.mode =  mode if mode < len(self.modes) else 0
+        self.mode_function = self.modes[self.mode]
+        if self.mode == 6:
+            self.keys.clear()
+        if self.mode >= 3:
+            self.dynamic = True 
+        else:
+            self.dynamic = False
+            self.mode_function()
