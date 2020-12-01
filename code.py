@@ -11,9 +11,11 @@ L2D = LAYER_TAP(2, D)
 L3B = LAYER_TAP(3, B)
 LSFT4 = LAYER_MODS(4, MODS(LSHIFT))
 RSFT4 = LAYER_MODS(4, MODS(RSHIFT))
+L5S = LAYER_TAP(5, S)
 
 # Semicolon & Ctrl
 SCC = MODS_TAP(MODS(RCTRL), ';')
+SINS = MODS_KEY(MODS(SHIFT), INSERT)
 
 keyboard.keymap = (
     # layer 0
@@ -37,9 +39,9 @@ keyboard.keymap = (
     # layer 2
     (
         '`',  F1,  F2,  F3,  F4,  F5,  F6,  F7,  F8,  F9, F10, F11, F12, DEL,
-        ___, ___, ___, ___, ___, ___, ___,PGUP, ___, ___, ___,AUDIO_VOL_DOWN,AUDIO_VOL_UP,AUDIO_MUTE,
+        ___, ___, ___, ___, ___, ___,HOME,PGUP, ___, ___,SINS,AUDIO_VOL_DOWN,AUDIO_VOL_UP,AUDIO_MUTE,
         ___, ___, ___, ___, ___, ___,LEFT,DOWN, UP,RIGHT, ___, ___,      ___,
-        ___, ___, ___, ___, ___, ___,PGDN, ___, ___, ___, ___,           ___,
+        ___, ___, ___, ___, ___, ___,PGDN,END, ___, ___, ___,           ___,
         ___, ___, ___,                ___,               ___, ___, ___,  ___
     ),
 
@@ -47,8 +49,8 @@ keyboard.keymap = (
     (
         BT_TOGGLE,BT1,BT2, BT3,BT4,BT5,BT6,BT7, BT8, BT9, BT0, ___, ___, ___,
         RGB_MOD, ___, ___, ___, ___, ___,___,USB_TOGGLE,___,___,___,___,___, ___,
-        ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___,      ___,
-        ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___,           ___,
+        RGB_TOGGLE,HUE_RGB,RGB_HUE,SAT_RGB,RGB_SAT,___,___,___,___,___,___,___,      ___,
+        ___, ___, ___, ___, ___, ___, ___, ___,VAL_RGB,RGB_VAL, ___,           ___,
         ___, ___, ___,                ___,               ___, ___, ___,  ___
     ),
 
@@ -58,6 +60,15 @@ keyboard.keymap = (
         ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___,
         ___, ___, ___,   D, ___, ___, ___, ___, ___, ___, ';', ___,      ___,
         ___, ___, ___, ___, ___,   B, ___, ___, ___, ___, ___,           ___,
+        ___, ___, ___,                ___,               ___, ___, ___,  ___
+    ),
+
+    # layer 5
+    (
+        ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___, ___,
+        ___, ___, ___, ___, ___, ___,MS_W_UP,MS_UL,MS_UP,MS_UR, ___, ___, ___, ___,
+        ___, ___, ___, ___, ___, ___,MS_BTN1,MS_LT,MS_DN,MS_RT,MS_BTN2, ___,      ___,
+        ___, ___, ___, ___, ___, ___,MS_W_DN,MS_DL,MS_DN,MS_DR, ___,           ___,
         ___, ___, ___,                ___,               ___, ___, ___,  ___
     ),
 )
@@ -109,5 +120,7 @@ keyboard.pairs_handler = pairs_handler
 
 # Pairs: J & K, U & I
 keyboard.pairs = [{35, 36}, {20, 19}]
+
+# keyboard.verbose = False
 
 keyboard.run()
